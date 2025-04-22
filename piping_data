@@ -1,0 +1,405 @@
+PIPING DATA
+
+Python_part(clenaing of data):-
+
+import pandas as pd
+
+# Step 1: Read the messy CSV file
+file_path = '/home/amitha/Downloads/PIPING (ALL UNIT & FURNACE).txt'
+df = pd.read_csv(file_path, engine='python')
+
+# Step 2: Select the required columns
+selected_cols = [
+    'GAD \nArea',
+    'Dia (Inch)',
+    'Dia (mm)',
+    'Insulation\nCode',
+    'Insulation\nThk',
+    'Insulation\nMaterial',
+    'Insulation\nJacket',
+    ' Pipe Length Including Fitting              (in M)',
+    'Total Area\nOver Ins\n(m²)'
+]
+
+df_cleaned = df[selected_cols]
+
+# Step 3: Rename columns
+df_cleaned.columns = [
+    'Gad_area', 'Dia_inc', 'Dia_mm', 'Insulation_code',
+    'Insulation_thk', 'Insulation_mat', 'Insulation_jac',
+    'Pipe_len', 'Total_area'
+]
+
+# Step 4: Clean numeric columns
+df_cleaned['Gad_area'] = pd.to_numeric(df_cleaned['Gad_area'], errors='coerce').fillna(0).astype(int)
+df_cleaned['Dia_inc'] = pd.to_numeric(df_cleaned['Dia_inc'], errors='coerce').fillna(0).astype(int)
+df_cleaned['Dia_mm'] = pd.to_numeric(df_cleaned['Dia_mm'], errors='coerce').fillna(0.0).astype(float)
+df_cleaned['Insulation_thk'] = pd.to_numeric(df_cleaned['Insulation_thk'], errors='coerce').fillna(0).astype(int)
+df_cleaned['Pipe_len'] = pd.to_numeric(df_cleaned['Pipe_len'], errors='coerce').fillna(0.0).astype(float)
+df_cleaned['Total_area'] = pd.to_numeric(df_cleaned['Total_area'], errors='coerce').fillna(0.0).astype(float)
+
+# Step 5: Remove rows with zero values in critical columns (e.g., Gad_area, Pipe_len)
+df_cleaned = df_cleaned[(df_cleaned['Gad_area'] != 0) |
+                        (df_cleaned['Dia_inc'] != 0) |
+                        (df_cleaned['Pipe_len'] != 0)]
+
+# Step 6: Save cleaned CSV for Hive
+output_path = '/home/amitha/Downloads/piping_clean.csv'
+df_cleaned.to_csv(output_path, index=False)
+
+print(f"\n✅ Cleaned CSV saved to: {output_path}")
+
+sql_part(table creation):-
+
+show databases;
+use batch75;
+show tables;
+
+1) create table piping(Gad_area int,Dia_inc int,Dia_mm float,Insulation_code string,Insulation_thk int,Insulation_mat string,Insulation_jac string,Pipe_len float,Total_area float)row format delimited fields terminated by ','stored as textfile tblproperties('skip.header.line.count'='1');
+
+2) LOAD DATA LOCAL INPATH '/home/amitha/Downloads/piping_clean.csv' INTO TABLE piping;
+
+3) select * from piping limit 10;
+
++------------------+-----------------+----------------+-------------------------+------------------------+------------------------+------------------------+------------------+--------------------+
+| piping.gad_area  | piping.dia_inc  | piping.dia_mm  | piping.insulation_code  | piping.insulation_thk  | piping.insulation_mat  | piping.insulation_jac  | piping.pipe_len  | piping.total_area  |
++------------------+-----------------+----------------+-------------------------+------------------------+------------------------+------------------------+------------------+--------------------+
+| 0                | 68              | 1727.2         | HI                      | 80                     | MWB                    | SS_0.8                 | 13.64            | 80.86              |
+| 0                | 68              | 1727.2         | HI                      | 80                     | MWB                    | SS_0.8                 | 11.92            | 70.68              |
+| 0                | 24              | 610.0          | HI                      | 80                     | MWPS                   | SS_0.8                 | 0.45             | 1.1                |
+| 0                | 2               | 60.0           | HI                      | 40                     | MWPS                   | SS_0.6                 | 0.44             | 0.19               |
+| 0                | 68              | 1727.2         | HI                      | 80                     | MWB                    | SS_0.8                 | 13.64            | 80.86              |
+| 0                | 68              | 1727.2         | HI                      | 80                     | MWB                    | SS_0.8                 | 15.41            | 91.35              |
+| 0                | 24              | 610.0          | HI                      | 80                     | MWPS                   | SS_0.8                 | 0.45             | 1.1                |
+| 0                | 2               | 60.0           | HI                      | 40                     | MWPS                   | SS_0.6                 | 0.44             | 0.19               |
+| 0                | 76              | 1930.4         | HI                      | 50                     | MWB                    | SS_0.8                 | 9.84             | 62.74              |
+| 0                | 1               | 34.0           | HI                      | 30                     | MWPS                   | SS_0.6                 | 4.02             | 1.19               |
++------------------+-----------------+----------------+-------------------------+------------------------+------------------------+------------------------+------------------+--------------------+
+10 rows selected (1.051 seconds)
+
+2) select count(*) from piping;
++--------+
+|  _c0   |
++--------+
+| 31647  |
++--------+
+1 row selected (1.276 seconds)
+
+
+3) select * from piping where insulation_code='HI' and insulation_mat='MWPS' limit 10;
++------------------+-----------------+----------------+-------------------------+------------------------+------------------------+------------------------+------------------+--------------------+
+| piping.gad_area  | piping.dia_inc  | piping.dia_mm  | piping.insulation_code  | piping.insulation_thk  | piping.insulation_mat  | piping.insulation_jac  | piping.pipe_len  | piping.total_area  |
++------------------+-----------------+----------------+-------------------------+------------------------+------------------------+------------------------+------------------+--------------------+
+| 0                | 24              | 610.0          | HI                      | 80                     | MWPS                   | SS_0.8                 | 0.45             | 1.1                |
+| 0                | 2               | 60.0           | HI                      | 40                     | MWPS                   | SS_0.6                 | 0.44             | 0.19               |
+| 0                | 24              | 610.0          | HI                      | 80                     | MWPS                   | SS_0.8                 | 0.45             | 1.1                |
+| 0                | 2               | 60.0           | HI                      | 40                     | MWPS                   | SS_0.6                 | 0.44             | 0.19               |
+| 0                | 1               | 34.0           | HI                      | 30                     | MWPS                   | SS_0.6                 | 4.02             | 1.19               |
+| 0                | 1               | 34.0           | HI                      | 30                     | MWPS                   | SS_0.6                 | 0.86             | 0.25               |
+| 0                | 2               | 60.0           | HI                      | 30                     | MWPS                   | SS_0.6                 | 0.21             | 0.08               |
+| 0                | 1               | 34.0           | HI                      | 30                     | MWPS                   | SS_0.6                 | 3.89             | 1.15               |
+| 0                | 1               | 34.0           | HI                      | 30                     | MWPS                   | SS_0.6                 | 0.98             | 0.29               |
+| 0                | 2               | 60.0           | HI                      | 30                     | MWPS                   | SS_0.6                 | 0.21             | 0.08               |
++------------------+-----------------+----------------+-------------------------+------------------------+------------------------+------------------------+------------------+--------------------+
+10 rows selected (0.174 seconds)
+
+
+4) select count(distinct(piping.insulation_mat)) from piping;
++------+
+| _c0  |
++------+
+| 10   |
++------+
+1 row selected (1.389 seconds)
+
+5) SELECT SUM(total_area) AS total_area_sum FROM piping WHERE insulation_code = 'HI' AND dia_inc = 68;
++---------------------+
+|   total_area_sum    |
++---------------------+
+| 1463.3800010681152  |
++---------------------+
+1 row selected (1.259 seconds)
+
+6)SELECT insulation_code, COUNT(*) AS code_count FROM piping GROUP BY insulation_code; (occurrences of each insulation_code in the table  piping)
++------------------+-------------+
+| insulation_code  | code_count  |
++------------------+-------------+
+| DA               | 209         |
+| E                | 482         |
+| F                | 4710        |
+| HI               | 14288       |
+| HI*              | 5247        |
+| J                | 183         |
+| KA               | 52          |
+| KA*              | 68          |
+| KC               | 56          |
+| LA               | 393         |
+| LC               | 152         |
+| N                | 653         |
+| P                | 3927        |
+| P*               | 635         |
+| PA               | 42          |
+| PC               | 278         |
+| S                | 187         |
+| S*               | 84          |
+| U                | 1           |
++------------------+-------------+
+
+
+7) SELECT insulation_code,dia_inc,insulation_thk,pipe_len FROM piping limit 10;
++------------------+----------+-----------------+-----------+
+| insulation_code  | dia_inc  | insulation_thk  | pipe_len  |
++------------------+----------+-----------------+-----------+
+| HI               | 68       | 80              | 13.64     |
+| HI               | 68       | 80              | 11.92     |
+| HI               | 24       | 80              | 0.45      |
+| HI               | 2        | 40              | 0.44      |
+| HI               | 68       | 80              | 13.64     |
+| HI               | 68       | 80              | 15.41     |
+| HI               | 24       | 80              | 0.45      |
+| HI               | 2        | 40              | 0.44      |
+| HI               | 76       | 50              | 9.84      |
+| HI               | 1        | 30              | 4.02      |
++------------------+----------+-----------------+-----------+
+10 rows selected (0.095 seconds)
+
+8)SELECT DISTINCT insulation_code,dia_inc,insulation_thk,pipe_len FROM piping;(multiple entries per insulation code and want distinct combinations, use:)
+| insulation_code  | dia_inc  | insulation_thk  | pipe_len  |
++------------------+----------+-----------------+-----------+
+| PC               | 48       | 100             | 2.41      |
+| PC               | 48       | 100             | 2.66      |
+| PC               | 48       | 100             | 2.99      |
+| PC               | 48       | 100             | 3.01      |
+| PC               | 48       | 100             | 4.04      |
+| PC               | 48       | 100             | 5.44      |
+| PC               | 48       | 100             | 6.44      |
+| PC               | 48       | 100             | 7.46      |
+| PC               | 48       | 100             | 7.73      |
+| PC               | 48       | 100             | 8.36      |
+| PC               | 48       | 100             | 11.16     |
+| PC               | 48       | 100             | 11.75     |
+| PC               | 48       | 100             | 14.41     |
+| PC               | 48       | 100             | 15.16     |
+| PC               | 48       | 100             | 17.81     |
+| PC               | 48       | 100             | 28.8      |
+| DA               | 52       | 50              | 1.23      |
+| DA               | 52       | 50              | 1.89      |
+| DA               | 52       | 50              | 4.5       |
+| DA               | 52       | 50              | 6.22      |
+| DA               | 52       | 50              | 7.18      |
+| DA               | 52       | 50              | 9.1       |
+| DA               | 52       | 50              | 11.25     |
+| DA               | 52       | 50              | 13.5      |
+| DA               | 52       | 50              | 23.1      |
+| DA               | 52       | 50              | 27.0      |
+| PC               | 52       | 100             | 0.99      |
+| PC               | 52       | 100             | 1.71      |
+| PC               | 52       | 100             | 1.73      |
+| PC               | 52       | 100             | 2.19      |
+| PC               | 52       | 100             | 2.32      |
+| PC               | 52       | 100             | 2.91      |
+| PC               | 52       | 100             | 6.08      |
+| PC               | 52       | 100             | 9.0       |
+| PC               | 52       | 100             | 11.91     |
+| PC               | 52       | 100             | 13.73     |
+| PC               | 52       | 100             | 22.43     |
+| LA               | 56       | 100             | 2.29      |
+| LA               | 56       | 100             | 2.42      |
+| LA               | 56       | 100             | 2.51      |
+| LA               | 56       | 100             | 2.87      |
+| LA               | 56       | 100             | 3.21      |
+| LA               | 56       | 100             | 4.25      |
+| LA               | 56       | 100             | 8.69      |
+| LA               | 56       | 100             | 10.18     |
+| LA               | 56       | 100             | 11.55     |
+| LA               | 56       | 100             | 12.41     |
+| LA               | 56       | 100             | 12.55     |
+| LA               | 56       | 100             | 13.01     |
+| LA               | 56       | 100             | 14.7      |
+| LA               | 56       | 100             | 18.0      |
+| LA               | 56       | 100             | 18.23     |
+| LA               | 56       | 100             | 19.06     |
+| LA               | 56       | 100             | 27.85     |
+| DA               | 60       | 50              | 1.57      |
+| DA               | 60       | 50              | 2.21      |
+| DA               | 60       | 50              | 2.48      |
+| DA               | 60       | 50              | 2.87      |
+| DA               | 60       | 50              | 4.82      |
+| DA               | 60       | 50              | 5.66      |
+| DA               | 60       | 50              | 6.0       |
+| DA               | 60       | 50              | 6.16      |
+| DA               | 60       | 50              | 8.49      |
+| DA               | 60       | 50              | 10.79     |
+| DA               | 60       | 50              | 10.83     |
+| DA               | 60       | 50              | 11.28     |
+| DA               | 60       | 50              | 13.22     |
+| DA               | 60       | 50              | 13.5      |
+| DA               | 60       | 50              | 14.97     |
+| DA               | 60       | 50              | 15.47     |
+| DA               | 60       | 50              | 20.9      |
+| F                | 60       | 130             | 4.91      |
+| F                | 60       | 130             | 6.1       |
+| F                | 60       | 130             | 6.81      |
+| F                | 60       | 130             | 11.0      |
+| F                | 60       | 130             | 20.0      |
+| F                | 60       | 130             | 20.62     |
+| F                | 60       | 130             | 22.0      |
+| F                | 60       | 130             | 28.38     |
+| F                | 60       | 130             | 43.16     |
+| PC               | 60       | 100             | 2.72      |
+| PC               | 60       | 100             | 3.24      |
+| PC               | 60       | 100             | 3.59      |
+| PC               | 60       | 100             | 4.57      |
+| PC               | 60       | 100             | 4.86      |
+| PC               | 60       | 100             | 4.89      |
+| PC               | 60       | 100             | 6.29      |
+| PC               | 60       | 100             | 6.71      |
+| PC               | 60       | 100             | 7.81      |
+| PC               | 60       | 100             | 7.88      |
+| PC               | 60       | 100             | 9.0       |
+| PC               | 60       | 100             | 10.12     |
+| PC               | 60       | 100             | 13.07     |
+| F                | 64       | 50              | 0.28      |
+| F                | 64       | 50              | 1.66      |
+| LA               | 64       | 180             | 4.17      |
+| LA               | 64       | 180             | 4.24      |
+| LA               | 64       | 180             | 4.5       |
+| LA               | 64       | 180             | 5.38      |
+| LA               | 64       | 180             | 5.5       |
++------------------+----------+-----------------+-----------+
+| insulation_code  | dia_inc  | insulation_thk  | pipe_len  |
++------------------+----------+-----------------+-----------+
+| LA               | 64       | 180             | 6.53      |
+| LA               | 64       | 180             | 7.37      |
+| LA               | 64       | 180             | 8.8       |
+| LA               | 64       | 180             | 11.33     |
+| LA               | 64       | 180             | 11.45     |
+| LA               | 64       | 180             | 16.5      |
+| KA               | 66       | 50              | 2.92      |
+| KA               | 66       | 50              | 6.81      |
+| KA               | 66       | 50              | 8.42      |
+| PC               | 66       | 100             | 0.46      |
+| PC               | 66       | 100             | 11.87     |
+| HI               | 68       | 80              | 6.5       |
+| HI               | 68       | 80              | 7.77      |
+| HI               | 68       | 80              | 8.0       |
+| HI               | 68       | 80              | 9.0       |
+| HI               | 68       | 80              | 10.47     |
+| HI               | 68       | 80              | 10.5      |
+| HI               | 68       | 80              | 11.92     |
+| HI               | 68       | 80              | 12.0      |
+| HI               | 68       | 80              | 12.96     |
+| HI               | 68       | 80              | 13.0      |
+| HI               | 68       | 80              | 13.12     |
+| HI               | 68       | 80              | 13.5      |
+| HI               | 68       | 80              | 13.64     |
+| HI               | 68       | 80              | 14.79     |
+| HI               | 68       | 80              | 15.41     |
+| HI               | 68       | 80              | 16.12     |
+| HI               | 76       | 50              | 3.5       |
+| HI               | 76       | 50              | 7.56      |
+| HI               | 76       | 50              | 7.74      |
+| HI               | 76       | 50              | 8.0       |
+| HI               | 76       | 50              | 8.01      |
+| HI               | 76       | 50              | 8.47      |
+| HI               | 76       | 50              | 8.64      |
+| HI               | 76       | 50              | 9.62      |
+| HI               | 76       | 50              | 9.84      |
+| HI               | 76       | 50              | 10.83     |
+| HI               | 76       | 50              | 11.25     |
+| HI               | 76       | 50              | 13.84     |
+| KA               | 76       | 50              | 1.42      |
+| KA               | 76       | 50              | 2.19      |
+| KA               | 76       | 50              | 2.49      |
+| KA               | 76       | 50              | 2.85      |
+| KA               | 76       | 50              | 3.73      |
+| KA               | 76       | 50              | 4.0       |
+| KA               | 76       | 50              | 4.75      |
+| KA               | 76       | 50              | 9.56      |
+| KA               | 76       | 50              | 11.65     |
+| KA               | 76       | 50              | 11.81     |
+| KA               | 76       | 50              | 16.49     |
+| KA               | 76       | 50              | 19.42     |
+| KA               | 76       | 50              | 26.99     |
++------------------+----------+-----------------+-----------+
+
+9)SELECT insulation_code,AVG(dia_inc) AS avg_size,AVG(insulation_thk) AS avg_thickness,AVG(pipe_len) AS avg_length FROM piping GROUP BY insulation_code; (want to aggregate values e.g. find average or sum for each insulation code)
++------------------+---------------------+---------------------+-----------------------+
+| insulation_code  |      avg_size       |    avg_thickness    |      avg_length       |
++------------------+---------------------+---------------------+-----------------------+
+| DA               | 16.6555023923445    | 50.0                | 4.854354084001488     |
+| E                | 8.16804979253112    | 33.15352697095436   | 7.0783402513851765    |
+| F                | 8.201698513800425   | 53.131634819532906  | 5.44432060040668      |
+| HI               | 5.023656215005599   | 45.504619260918254  | 5.435226761023926     |
+| HI*              | 5.540499332952163   | 47.77206022489041   | 4.595822357779398     |
+| J                | 9.579234972677595   | 47.431693989071036  | 4.4608196885085825    |
+| KA               | 34.36538461538461   | 50.0                | 5.789230763912201     |
+| KA*              | 5.852941176470588   | 75.0                | 8.200735296396648     |
+| KC               | 23.267857142857142  | 100.0               | 6.1132142799241205    |
+| LA               | 18.358778625954198  | 123.05343511450381  | 6.226870239615137     |
+| LC               | 12.855263157894736  | 164.53947368421052  | 5.756381584355902     |
+| N                | 3.355283307810107   | 0.0                 | 0.008897396497668023  |
+| P                | 5.026737967914438   | 48.408454290807235  | 5.995411251226465     |
+| P*               | 10.069291338582676  | 39.54330708661417   | 4.934377929632824     |
+| PA               | 23.285714285714285  | 50.0                | 10.169999948569707    |
+| PC               | 20.802158273381295  | 100.0               | 4.45446042301093      |
+| S                | 1.914438502673797   | 30.0                | 14.108609616517382    |
+| S*               | 0.7976190476190477  | 30.0                | 2.3017857156339145    |
+| U                | 2.0                 | 0.0                 | 0.0                   |
++------------------+---------------------+---------------------+-----------------------+
+19 rows selected (1.323 seconds)
+
+10)SELECT insulation_code,SUM(pipe_len) AS total_length FROM piping GROUP BY insulation_code; (total length per insulation code)
+ +------------------+---------------------+
+| insulation_code  |    total_length     |
++------------------+---------------------+
+| DA               | 1014.5600035563111  |
+| E                | 3411.760001167655   |
+| F                | 25642.750027915463  |
+| HI               | 77658.51996150985   |
+| HI*              | 24114.279911268502  |
+| J                | 816.3300029970706   |
+| KA               | 301.03999972343445  |
+| KA*              | 557.6500001549721   |
+| KC               | 342.33999967575073  |
+| LA               | 2447.160004168749   |
+| LC               | 874.9700008220971   |
+| N                | 5.809999912977219   |
+| P                | 23543.97998356633   |
+| P*               | 3133.329985316843   |
+| PA               | 427.1399978399277   |
+| PC               | 1238.3399975970387  |
+| S                | 2638.3099982887506  |
+| S*               | 193.35000011324883  |
+| U                | 0.0                 |
++------------------+---------------------+
+
+11)SELECT insulation_code,SUM(3.1416 * dia_inc * pipe_len) AS total_area FROM piping GROUP BY insulation_code; (total area per insulation code)
++------------------+---------------------+
+| insulation_code  |     total_area      |
++------------------+---------------------+
+| DA               | 83545.54397365451   |
+| E                | 140027.77032387257  |
+| F                | 1074711.4399658442  |
+| HI               | 1865938.6203504205  |
+| HI*              | 621129.1291525066   |
+| J                | 36816.97479456663   |
+| KA               | 45942.38101890683   |
+| KA*              | 11798.247267961502  |
+| KC               | 36901.42271959782   |
+| LA               | 201324.12516534328  |
+| LC               | 51366.29105654359   |
+| N                | 223.99609327316284  |
+| P                | 429345.5633804202   |
+| P*               | 123181.38100224733  |
+| PA               | 37930.04487514496   |
+| PC               | 112963.5465990305   |
+| S                | 16534.931345671415  |
+| S*               | 509.0020184516907   |
+| U                | 0.0                 |
++------------------+---------------------+
+
+
+
+
+
